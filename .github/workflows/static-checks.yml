@@ -26,6 +26,12 @@ jobs:
           assert.ok(!fs.existsSync('CNAME'),'Custom domain must not be configured');
           console.log('PASS: static structure, ten modules, and no external endpoints. Browser/device testing remains manual.');
           NODE
+      - name: Install browser test dependency
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Chromium responsive and interaction acceptance
+        run: node tests/browser-smoke.cjs
       - name: Upload isolated artifact (not Pages)
         uses: actions/upload-artifact@v4
         with:
