@@ -1,27 +1,8 @@
-const { chromium } = require('playwright');
-const assert = require('node:assert/strict');
-const path = require('node:path');
-(async()=>{
- const browser=await chromium.launch({headless:true});
- const page=await browser.newPage();
- const requests=[];
- page.on('request',r=>{if(!r.url().startsWith('file:'))requests.push(r.url())});
- await page.goto('file://'+path.resolve('index.html'));
- for(const width of [320,375,768,1024,1440]){
-  await page.setViewportSize({width,height:900});
-  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
-  assert.equal(overflow,false,'horizontal overflow at '+width);
- }
- const buttons=page.locator('#nav button');
- assert.equal(await buttons.count(),10);
- for(let i=0;i<10;i++){await buttons.nth(i).click();assert.equal(await buttons.nth(i).getAttribute('aria-pressed'),'true')}
- await page.locator('#draft').fill('Synthetic browser smoke');
- await page.locator('#capture button').click();
- assert.equal(await page.locator('#count').textContent(),'4');
- assert.match(await page.locator('#status').textContent(),/ยังไม่บันทึก Cloud/);
- await page.reload();
- assert.equal(await page.locator('#count').textContent(),'3');
- assert.equal(requests.length,0,'unexpected network requests: '+requests.join(','));
- console.log('PASS: Chromium responsive widths, 10 modules, in-memory capture, reload reset, no network.');
- await browser.close();
-})().catch(e=>{console.error(e);process.exit(1)});
+const {chromium}=require('playwright');const assert=require('node:assert/strict');const path=require('node:path');
+(async()=>{const browser=await chromium.launch({headless:true});const page=await browser.newPage();const requests=[];page.on('request',r=>{if(!r.url().startsWith('file:'))requests.push(r.url())});await page.goto('file://'+path.resolve('index.html'));
+for(const width of [320,375,768,1024,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'overflow '+width)}
+const nav=page.locator('#nav button');assert.equal(await nav.count(),10);for(let i=0;i<10;i++){await nav.nth(i).click();assert.equal(await nav.nth(i).getAttribute('aria-pressed'),'true');assert.ok((await page.locator('#panel').innerText()).trim().length>10)}
+await nav.nth(1).click();await page.getByLabel('ค้นหางาน').fill('บทความ');assert.equal(await page.locator('#panel .item').count(),1);await page.getByLabel('ค้นหางาน').fill('');await page.getByLabel('กรองสถานะ').selectOption('รอตรวจสอบ');assert.equal(await page.locator('#panel .item').count(),1);
+await page.locator('#draft').fill('Synthetic browser smoke');await page.locator('#capture button').click();assert.match(await page.locator('#status').innerText(),/ไม่บันทึก Cloud/);assert.match(await page.locator('#panel').innerText(),/Synthetic browser smoke/);
+await nav.nth(7).click();await page.getByRole('button',{name:'อนุมัติจำลอง'}).click();assert.match(await page.locator('#panel').innerText(),/อนุมัติจำลอง/);
+await page.reload();assert.doesNotMatch(await page.locator('#panel').innerText(),/Synthetic browser smoke/);await nav.nth(7).click();assert.match(await page.locator('#panel').innerText(),/รอพิจารณา/);assert.deepEqual(requests,[]);console.log('PASS: ten distinct modules, five responsive widths, task search/filter, capture, synthetic approval, reload reset, zero network');await browser.close()})().catch(e=>{console.error(e);process.exit(1)});
