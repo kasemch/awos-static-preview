@@ -1,7 +1,7 @@
 name: Static Preview Checks
 on:
   push:
-    branches: [main]
+    branches: [main, feature/awos-fp-01]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -19,7 +19,7 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs'),assert=require('node:assert/strict');
           const h=fs.readFileSync('index.html','utf8');
-          for(const s of ['lang="th"','name="viewport"','aria-label="AWOS modules"','id="capture"','role="status"','Cloud Sync: NOT CONNECTED','prefers-reduced-motion','focus-visible','max-width:760px']) assert.ok(h.includes(s),'Missing '+s);
+          for(const s of ['lang="th"','name="viewport"','aria-label="AWOS modules"','id="capture"','role="status"','Cloud Sync: NOT CONNECTED','prefers-reduced-motion','focus-visible','max-width:900px']) assert.ok(h.includes(s),'Missing '+s);
           const modules=['Dashboard','My Tasks','Projects','Calendar','Documents & Evidence','AI Assistant','Reports & Analytics','Approval','Settings & Profile','All-in-One Workspace'];
           for(const name of modules) assert.ok(h.includes('["'+name+'",'),'Missing module '+name);
           assert.doesNotMatch(h,/https?:\/\/|fetch\s*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co/i);
