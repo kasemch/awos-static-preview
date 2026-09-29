@@ -1,0 +1,40 @@
+name: Deploy AWOS Synthetic Preview to GitHub Pages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: awos-pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == 'kasemch/awos-static-preview' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require public repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          visibility="$(gh api repos/${GITHUB_REPOSITORY} --jq .visibility)"
+          test "$visibility" = public || { echo "::error::Repository must be public before deployment"; exit 1; }
+      - name: Check synthetic-only payload
+        run: |
+          test -f index.html
+          test ! -e CNAME
+          test ! -e .env
+          ! grep -Ei 'https?://|fetch[[:space:]]*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co' index.html
+          mkdir -p _site
+          cp index.html _site/index.html
+          printf '%s\n' 'AWOS synthetic preview only. No real data or cloud connection.' > _site/NOTICE.txt
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
