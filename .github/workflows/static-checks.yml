@@ -1,0 +1,36 @@
+name: Static Preview Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate synthetic static preview
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const h=fs.readFileSync('index.html','utf8');
+          for(const s of ['lang="th"','name="viewport"','aria-label="AWOS modules"','id="capture"','role="status"','Cloud Sync: NOT CONNECTED','prefers-reduced-motion','focus-visible','max-width:760px']) assert.ok(h.includes(s),'Missing '+s);
+          const modules=['Dashboard','My Tasks','Projects','Calendar','Documents & Evidence','AI Assistant','Reports & Analytics','Approval','Settings & Profile','All-in-One Workspace'];
+          for(const name of modules) assert.ok(h.includes('["'+name+'",'),'Missing module '+name);
+          assert.doesNotMatch(h,/https?:\/\/|fetch\s*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co/i);
+          assert.ok(!fs.existsSync('CNAME'),'Custom domain must not be configured');
+          console.log('PASS: static structure, ten modules, and no external endpoints. Browser/device testing remains manual.');
+          NODE
+      - name: Upload isolated artifact (not Pages)
+        uses: actions/upload-artifact@v4
+        with:
+          name: awos-static-preview
+          path: |
+            index.html
+            README.md
+          if-no-files-found: error
