@@ -22,11 +22,11 @@ jobs:
           for(const s of ['lang="th"','name="viewport"','aria-label="AWOS modules"','id="capture"','role="status"','id="workspace"','Private by default','prefers-reduced-motion','focus-visible','max-width:900px']) assert.ok(h.includes(s),'Missing '+s);
           const modules=['Dashboard','My Tasks','Projects','Calendar','Documents & Evidence','AI Assistant','Reports & Analytics','Approval','Settings & Profile','All-in-One Workspace'];
           for(const name of modules) assert.ok(h.includes('["'+name+'",'),'Missing module '+name);
-          if(process.env.GITHUB_REF==='refs/heads/main') assert.doesNotMatch(h,/https?:\\/\\/|fetch\\s*\\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\\.co/i);
+          if(process.env.GITHUB_REF==='refs/heads/main') assert.ok(!new RegExp('https?://|fetch\\\\s*\\\\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\\\\.co','i').test(h));
           else {
             assert.ok(h.includes('ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth'),'FP-11 sandbox auth endpoint missing');
             assert.doesNotMatch(h,/service_role|supabase\\.co|client_secret|DATABASE_URL/i);
-            const urls=[...h.matchAll(/https?:\\/\\/[^"'\\s<]+/g)].map(m=>m[0]);
+            const urls=[...h.matchAll(new RegExp('https?://[^\\"\\\'\\\\s<]+','g'))].map(m=>m[0]);
             assert.ok(urls.every(u=>u.startsWith('https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth')),'Unexpected external endpoint');
           }
           assert.ok(!fs.existsSync('CNAME'),'Custom domain must not be configured');
