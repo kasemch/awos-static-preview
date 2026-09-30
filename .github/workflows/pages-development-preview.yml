@@ -1,0 +1,55 @@
+name: Deploy AWOS Development Preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: awos-pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == 'kasemch/awos-static-preview' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout published baseline
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: baseline
+      - name: Checkout development candidate
+        uses: actions/checkout@v4
+        with:
+          ref: feature/awos-fp-01
+          path: candidate
+      - name: Require public repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          visibility="$(gh api repos/${GITHUB_REPOSITORY} --jq .visibility)"
+          test "$visibility" = public || { echo "::error::Repository must be public"; exit 1; }
+      - name: Verify isolated synthetic payloads
+        run: |
+          test -f baseline/index.html
+          test -f candidate/index.html
+          test ! -e baseline/CNAME
+          test ! -e candidate/CNAME
+          test ! -e baseline/.env
+          test ! -e candidate/.env
+          ! grep -Ei 'https?://|fetch[[:space:]]*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co' baseline/index.html
+          ! grep -Ei 'https?://|fetch[[:space:]]*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co' candidate/index.html
+          mkdir -p _site/dev
+          cp baseline/index.html _site/index.html
+          cp candidate/index.html _site/dev/index.html
+          printf '%s\n' 'AWOS baseline synthetic preview. No real data or cloud connection.' > _site/NOTICE.txt
+          printf '%s\n' 'AWOS development synthetic preview. No real data or cloud connection.' > _site/dev/NOTICE.txt
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
