@@ -16,3 +16,12 @@ No evidence has been supplied for actual iPhone/Safari, iOS VoiceOver, keyboard-
 
 ## Release control
 PR remains Draft. No merge is executed by this report. Main and current Pages release remain unchanged. When human acceptance evidence is supplied, update FP-03/FP-05 and resolve defects if any; then request explicit authorization to merge PR #1. Pages deployment is a separate authorization after post-merge CI.
+
+
+## FP-09 / NEXA update — 2026-09-30
+- Latest browser acceptance run 36664612230: SUCCESS at commit b47cb9adc12fa1b8ccf036458d065b4ace79e60f.
+- Smart Capture preserves original input when formalizing a Teaching record without a detected course code.
+- Regression coverage includes unknown course-code verification, Task↔Calendar↔Workflow creation, Document Lifecycle presence, reload reset and zero external network requests.
+- NEXA brand layer and Multi-user/Connector architecture are documented; no production database, OAuth, connector delivery or real-user data is enabled.
+- Automated technical gate: PASS for the current feature-branch static prototype.
+- Development Preview publication remains separate from merge/production and does not authorize production use.
