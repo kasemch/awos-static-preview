@@ -1,0 +1,44 @@
+name: Deploy AWOS Baseline + Development Preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: awos-pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == 'kasemch/awos-static-preview' && github.ref == 'refs/heads/feature/awos-fp-01'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require public repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          visibility="$(gh api repos/${GITHUB_REPOSITORY} --jq .visibility)"
+          test "$visibility" = public || { echo "::error::Repository must be public"; exit 1; }
+      - name: Build isolated baseline plus dev payload
+        run: |
+          test -f index.html
+          test -f baseline/index.html
+          test ! -e CNAME
+          test ! -e .env
+          ! grep -Ei 'https?://|fetch[[:space:]]*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co' index.html
+          ! grep -Ei 'https?://|fetch[[:space:]]*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co' baseline/index.html
+          mkdir -p _site/dev
+          cp baseline/index.html _site/index.html
+          cp index.html _site/dev/index.html
+          printf '%s\n' 'AWOS baseline synthetic preview. No real data or cloud connection.' > _site/NOTICE.txt
+          printf '%s\n' 'AWOS development synthetic preview. No real data or cloud connection.' > _site/dev/NOTICE.txt
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
