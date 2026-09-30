@@ -25,4 +25,21 @@ function analyzeCapture(value){let due=$("due").value;if(!due&&/ศุกร์�
 function showProposal(x){const p=$("smart-preview");p.replaceChildren();p.append(el("h3","ข้อเสนอ Smart Capture"),item("ต้นฉบับ",x.original),item("ข้อความทางการ",x.formal),item("หมวด / บริบท",x.category+" · "+x.context),item("วันกำหนด",x.due||"ยังไม่ระบุ"));if(x.code)p.append(item("รหัสรายวิชา",x.code+(x.verify?" · ต้องยืนยันรหัสวิชา":" · พบในทะเบียนจำลอง")));if(x.verify)p.append(el("p","ไม่พบรหัสนี้ใน Course Registry จำลอง · ระบบจะไม่แก้รหัสให้อัตโนมัติ","notice"));const flow=x.category==="Teaching"?"Teaching Session → Calendar → เตรียมการสอน → เอกสาร Draft → Review/Approve → Teaching → Evidence → Reflection":"Task → Plan → Execute → Verify → Evidence";p.append(item("Workflow ที่เสนอ",flow));p.append(btn("ยืนยันและบันทึก",confirmCapture,"primary"),btn("ยกเลิก",()=>{pendingCapture=null;p.replaceChildren();$("status").textContent="ยกเลิกข้อเสนอแล้ว"}))}
 function confirmCapture(){if(!pendingCapture)return;const x=pendingCapture,id=Date.now();tasks.unshift({id,title:x.formal,original:x.original,category:x.category,state:"รอดำเนินการ",due:x.due,context:x.context});if(x.due)calendarEvents.unshift({taskId:id,title:x.formal,date:x.due});workflows.unshift({title:x.category==="Teaching"?"Teaching workflow · "+(x.code||x.original):"Workflow · "+x.original,type:x.category,state:x.verify?"รอยืนยันรหัสวิชา":"รอ Human Confirm"});pendingCapture=null;$("smart-preview").replaceChildren();$("draft").value="";$("due").value="";$("status").textContent=x.due?"บันทึก Task + Calendar + Workflow แล้ว · จำลอง":"บันทึก Task + Workflow แล้ว · จำลอง";render(1)}
 $("workspace").addEventListener("change",()=>{if(active===8)render(8);$("status").textContent="เปลี่ยน Workspace เฉพาะการจำลอง · ไม่มีข้อมูลข้าม Workspace"});$("capture").addEventListener("submit",e=>{e.preventDefault();const value=$("draft").value.trim();if(!value)return;pendingCapture=analyzeCapture(value);showProposal(pendingCapture);$("status").textContent="สร้างข้อเสนอแล้ว · ตรวจสอบก่อนยืนยัน"});render(0);
+
+// FP-11C: real Google OAuth sandbox (Neon Auth). Other login methods remain gated.
+const NEXA_AUTH_URL="https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth";
+async function nexaGoogleLogin(){
+  const callback=location.origin+location.pathname;
+  $("status").textContent="กำลังส่งไป Google ผ่าน Neon Auth Sandbox…";
+  const r=await fetch(NEXA_AUTH_URL+"/sign-in/social",{method:"POST",headers:{"content-type":"application/json"},credentials:"include",body:JSON.stringify({provider:"google",callbackURL:callback,newUserCallbackURL:callback,errorCallbackURL:callback})});
+  const j=await r.json(); if(!r.ok) throw new Error(j.message||"Google sign-in failed");
+  if(j.url) location.assign(j.url); else throw new Error("Auth redirect URL missing");
+}
+async function nexaSession(){
+  try{const r=await fetch(NEXA_AUTH_URL+"/get-session",{credentials:"include"});if(!r.ok)return null;return await r.json()}catch{return null}
+}
+async function nexaLogout(){await fetch(NEXA_AUTH_URL+"/sign-out",{method:"POST",headers:{"content-type":"application/json"},credentials:"include",body:"{}"});location.reload()}
+const originalRender=render;render=function(i){originalRender(i);if(i===8){const p=$("panel");const h=[...p.querySelectorAll("h3")].find(x=>x.textContent.includes("Simple Login"));if(h){const box=h.nextElementSibling;if(box){const bs=box.querySelectorAll("button");if(bs[0]){bs[0].textContent="เข้าใช้ด้วย Google";bs[0].onclick=()=>nexaGoogleLogin().catch(e=>$("status").textContent="Google Auth: "+e.message)}if(bs[1]){bs[1].disabled=true;bs[1].textContent="Microsoft · ยังไม่เปิด"}if(bs[2]){bs[2].disabled=true;bs[2].textContent="Magic Link · ยังไม่เปิด"}}}}};
+nexaSession().then(s=>{if(s?.user){$("status").textContent="Signed in · "+(s.user.email||"Google user")+" · Auth Sandbox";if(active===8){const p=$("panel");p.prepend(btn("ออกจากระบบ",nexaLogout))}}});
+render(active);
 </script></body></html>
