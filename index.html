@@ -108,8 +108,8 @@ async function nexaLoadTasks(){
  if(error)throw new Error("Tasks read failed · "+error.message); nexaPersistentTasks=data||[]; return nexaPersistentTasks;
 }
 async function nexaCreateTask(title){
- if(!nexaWorkspace||!nexaIdentity)throw new Error("Authenticated workspace required"); const client=await getNexaClient();
- const {data,error}=await client.from("tasks").insert({workspace_id:nexaWorkspace,created_by:nexaIdentity.id,title,status:"open"}).select("id,title,status,created_at,workspace_id").single();
+ if(!nexaWorkspace||!nexaIdentity)throw new Error("Authenticated workspace required"); const actorId=nexaIdentity.user?.id||nexaIdentity.id;if(!actorId)throw new Error("Task create failed · authenticated user id unavailable"); const client=await getNexaClient();
+ const {data,error}=await client.from("tasks").insert({workspace_id:nexaWorkspace,created_by:actorId,title,status:"open"}).select("id,title,status,created_at,workspace_id").single();
  if(error)throw new Error("Task create failed · "+error.message); await nexaLoadTasks(); return data;
 }
 async function nexaUpdateTask(id,status){if(!nexaWorkspace||!nexaIdentity)throw new Error("Authenticated workspace required");const client=await getNexaClient();const {data,error}=await client.from("tasks").update({status}).eq("id",id).select("id,title,status,created_at,workspace_id").single();if(error)throw new Error("Task update failed · "+error.message);await nexaLoadTasks();return data;}
