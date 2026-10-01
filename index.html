@@ -111,7 +111,8 @@ async function nexaCreateTask(title){
  const {data,error}=await client.from("tasks").insert({workspace_id:nexaWorkspace,created_by:nexaIdentity.id,title,status:"open"}).select("id,title,status,created_at,workspace_id").single();
  if(error)throw new Error("Task create failed · "+error.message); await nexaLoadTasks(); return data;
 }
-async function nexaUpdateTask(id,status){if(!nexaWorkspace||!nexaIdentity)throw new Error("Authenticated workspace required");const client=await getNexaClient();const {data,error}=await client.from("tasks").update({status}).eq("id",id).select("id,title,status,created_at,workspace_id").single();if(error)throw new Error("Task update failed · "+error.message);await nexaLoadTasks();return data;}\nasync function nexaLogout(){const auth=await getNexaAuth();await auth.signOut();location.reload()}
+async function nexaUpdateTask(id,status){if(!nexaWorkspace||!nexaIdentity)throw new Error("Authenticated workspace required");const client=await getNexaClient();const {data,error}=await client.from("tasks").update({status}).eq("id",id).select("id,title,status,created_at,workspace_id").single();if(error)throw new Error("Task update failed · "+error.message);await nexaLoadTasks();return data;}
+async function nexaLogout(){const auth=await getNexaAuth();await auth.signOut();location.reload()}
 const originalRender=render;render=function(i){originalRender(i);if(i===8){const p=$("panel");const h=[...p.querySelectorAll("h3")].find(x=>x.textContent.includes("Simple Login"));if(h){const box=h.nextElementSibling?.nextElementSibling;if(box){const bs=box.querySelectorAll("button");if(bs[0])bs[0].onclick=()=>nexaGoogleLogin().catch(e=>$("status").textContent="Google Auth: "+e.message)}}}};
 $("nav").replaceChildren();modules.forEach(([name],i)=>$("nav").append(btn(String(i+1).padStart(2,"0")+" · "+name,()=>render(i))));
 render(active);
