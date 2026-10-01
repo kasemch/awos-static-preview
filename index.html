@@ -28,11 +28,18 @@ $("workspace").addEventListener("change",()=>{if(active===8)render(8);$("status"
 
 // FP-11D: Neon official browser SDK (ESM) handles OAuth/session/JWT.
 const NEXA_AUTH_URL="https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth";
-let nexaAuth=null;
+const NEXA_DATA_API_URL="https://ep-blue-leaf-b34hv87k.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1";
+let nexaAuth=null,nexaClient=null,nexaIdentity=null,nexaWorkspace=null;
+async function getNexaClient(){
+  if(nexaClient)return nexaClient;
+  const mod=await import("https://esm.sh/@neondatabase/neon-js@latest");
+  nexaClient=mod.createClient({auth:{url:NEXA_AUTH_URL},dataApi:{url:NEXA_DATA_API_URL}});
+  nexaAuth=nexaClient.auth; return nexaClient;
+}
 async function getNexaAuth(){
   if(nexaAuth)return nexaAuth;
-  const mod=await import("https://esm.sh/@neondatabase/neon-js@latest/auth");
-  nexaAuth=mod.createAuthClient(NEXA_AUTH_URL);
+  const client=await getNexaClient();
+  nexaAuth=client.auth;
   return nexaAuth;
 }
 async function nexaGoogleLogin(){
@@ -45,9 +52,16 @@ async function nexaGoogleLogin(){
 async function nexaSession(){
   try{const auth=await getNexaAuth();const result=await auth.getSession();return result?.data||null}catch(e){$("status").textContent="Auth session check failed · "+e.message;return null}
 }
+async function nexaBootstrap(){
+  const client=await getNexaClient();
+  const {data,error}=await client.rpc("bootstrap_personal_workspace");
+  if(error)throw new Error(error.message||"Personal Workspace bootstrap failed");
+  nexaWorkspace=Array.isArray(data)?data[0]:data;
+  return nexaWorkspace;
+}
 async function nexaLogout(){const auth=await getNexaAuth();await auth.signOut();location.reload()}
 const originalRender=render;render=function(i){originalRender(i);if(i===8){const p=$("panel");const h=[...p.querySelectorAll("h3")].find(x=>x.textContent.includes("Simple Login"));if(h){const box=h.nextElementSibling?.nextElementSibling;if(box){const bs=box.querySelectorAll("button");if(bs[0])bs[0].onclick=()=>nexaGoogleLogin().catch(e=>$("status").textContent="Google Auth: "+e.message)}}}};
 $("nav").replaceChildren();modules.forEach(([name],i)=>$("nav").append(btn(String(i+1).padStart(2,"0")+" · "+name,()=>render(i))));
-nexaSession().then(s=>{if(s?.session&&s?.user){$("status").textContent="Signed in · "+(s.user.email||"Google user")+" · Auth Sandbox";if(active===8){const p=$("panel");p.prepend(btn("ออกจากระบบ",nexaLogout))}}});
+nexaSession().then(async s=>{if(s?.session&&s?.user){nexaIdentity=s.user;$("status").textContent="Signed in · "+(s.user.email||"Google user")+" · Auth Sandbox · verifying workspace…";try{const w=await nexaBootstrap();$("status").textContent="Signed in · "+(s.user.email||"Google user")+" · Auth Sandbox · Personal Workspace PASS"+(w?" · "+w:"");}catch(e){$("status").textContent="Signed in · Auth PASS · Workspace bootstrap FAIL · "+e.message}if(active===8){render(8);const p=$("panel");p.prepend(btn("ออกจากระบบ",nexaLogout))}}});
 render(active);
 </script></body></html>
