@@ -29,11 +29,12 @@ $("workspace").addEventListener("change",()=>{if(active===8)render(8);$("status"
 // FP-11D: Neon official browser SDK (ESM) handles OAuth/session/JWT.
 const NEXA_AUTH_URL="https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth";
 const NEXA_DATA_API_URL="https://ep-blue-leaf-b34hv87k.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1";
+const NEXA_DATABASE_URL="https://ep-blue-leaf-b34hv87k.c-4.ap-southeast-1.aws.neon.tech/neondb";
 let nexaAuth=null,nexaClient=null,nexaIdentity=null,nexaWorkspace=null;
 async function getNexaClient(){
   if(nexaClient)return nexaClient;
   const mod=await import("https://esm.sh/@neondatabase/neon-js@latest");
-  nexaClient=mod.createClient({auth:{url:NEXA_AUTH_URL},dataApi:{url:NEXA_DATA_API_URL}});
+  nexaClient=mod.createClient(NEXA_DATABASE_URL);
   nexaAuth=nexaClient.auth; return nexaClient;
 }
 async function getNexaAuth(){
