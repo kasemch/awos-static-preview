@@ -30,7 +30,7 @@ $("workspace").addEventListener("change",()=>{if(active===8)render(8);$("status"
 const NEXA_AUTH_URL="https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth";
 const NEXA_DATA_API_URL="https://ep-blue-leaf-b34hv87k.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1";
 const NEXA_DATABASE_URL="https://ep-blue-leaf-b34hv87k.c-4.ap-southeast-1.aws.neon.tech/neondb";
-let nexaAuth=null,nexaClient=null,nexaIdentity=null,nexaWorkspace=null;
+let nexaAuth=null,nexaClient=null,nexaIdentity=null,nexaWorkspace=null,nexaPersistentTasks=[];
 async function getNexaClient(){
   if(nexaClient)return nexaClient;
   const mod=await import("https://esm.sh/@neondatabase/neon-js@latest");
@@ -62,7 +62,17 @@ async function nexaBootstrap(){
   if(visibleError)throw new Error("RLS read failed · "+visibleError.message);
   const rows=visible||[];
   if(rows.length!==1||rows[0].id!==nexaWorkspace)throw new Error("RLS isolation failed · visible workspaces="+rows.length);
+  await nexaLoadTasks();
   return nexaWorkspace;
+}
+async function nexaLoadTasks(){
+ const client=await getNexaClient(); const {data,error}=await client.from("tasks").select("id,title,status,created_at,workspace_id").order("created_at",{ascending:false});
+ if(error)throw new Error("Tasks read failed · "+error.message); nexaPersistentTasks=data||[]; return nexaPersistentTasks;
+}
+async function nexaCreateTask(title){
+ if(!nexaWorkspace||!nexaIdentity)throw new Error("Authenticated workspace required"); const client=await getNexaClient();
+ const {data,error}=await client.from("tasks").insert({workspace_id:nexaWorkspace,created_by:nexaIdentity.id,title,status:"open"}).select("id,title,status,created_at,workspace_id").single();
+ if(error)throw new Error("Task create failed · "+error.message); await nexaLoadTasks(); return data;
 }
 async function nexaLogout(){const auth=await getNexaAuth();await auth.signOut();location.reload()}
 const originalRender=render;render=function(i){originalRender(i);if(i===8){const p=$("panel");const h=[...p.querySelectorAll("h3")].find(x=>x.textContent.includes("Simple Login"));if(h){const box=h.nextElementSibling?.nextElementSibling;if(box){const bs=box.querySelectorAll("button");if(bs[0])bs[0].onclick=()=>nexaGoogleLogin().catch(e=>$("status").textContent="Google Auth: "+e.message)}}}};
