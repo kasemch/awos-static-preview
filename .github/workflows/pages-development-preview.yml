@@ -47,8 +47,8 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs'),assert=require('node:assert/strict');
           const h=fs.readFileSync('candidate/index.html','utf8');
-          const endpoint='https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth';
-          const scrubbed=h.split(endpoint).join('');
+          const allowed=['https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth','https://esm.sh/@neondatabase/neon-js@latest/auth'];
+          let scrubbed=h; for(const endpoint of allowed)scrubbed=scrubbed.split(endpoint).join('');
           assert.ok(!scrubbed.includes('https://')&&!scrubbed.includes('http://'),'Unexpected candidate external endpoint');
           NODE
           mkdir -p _site/dev
