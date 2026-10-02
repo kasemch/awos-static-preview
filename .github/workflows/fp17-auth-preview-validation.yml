@@ -1,0 +1,49 @@
+name: NEXA Authenticated Development Preview Validation
+on:
+  push:
+    branches: [feature/awos-fp-01]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-auth-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate FP-17 authenticated preview boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f index.html
+          test ! -e .env
+          grep -q 'NEXA · FP-17 · AUTHORIZATION TEST HARNESS' index.html
+          grep -q 'neonauth.c-4.ap-southeast-1.aws.neon.tech' index.html
+          grep -q 'apirest.c-4.ap-southeast-1.aws.neon.tech' index.html
+          grep -q 'createClient' index.html
+          ! grep -Eqi '(service[_-]?role|postgres(ql)?://|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|access_token[[:space:]]*[:=])' index.html
+          python3 - <<'PY'
+          import re, pathlib, sys
+          s=pathlib.Path("index.html").read_text()
+          urls=set(re.findall(r'https://[^"[:space:]<>]+',s))
+          allowed=(
+            "https://esm.sh/",
+            "https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/",
+            "https://ep-blue-leaf-b34hv87k.apirest.c-4.ap-southeast-1.aws.neon.tech/",
+            "https://ep-blue-leaf-b34hv87k.c-4.ap-southeast-1.aws.neon.tech/"
+          )
+          bad=[u for u in urls if not u.startswith(allowed)]
+          if bad:
+            print("Unapproved browser endpoint(s):", *bad, sep="\n")
+            sys.exit(1)
+          print("FP-17 endpoint allow-list PASS")
+          PY
+      - name: Build isolated authenticated preview artifact
+        run: |
+          mkdir -p _auth_preview
+          cp index.html _auth_preview/index.html
+          printf '%s\n' 'NEXA FP-17 authenticated development preview. Non-production Neon Auth/Data only. No embedded credentials.' > _auth_preview/NOTICE.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexa-fp17-auth-preview
+          path: _auth_preview
+          retention-days: 7
