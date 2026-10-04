@@ -10,40 +10,67 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate FP-17 authenticated preview boundary
+      - name: Validate FP-17 source boundary
         shell: bash
         run: |
           set -euo pipefail
           test -f index.html
           test ! -e .env
           grep -q 'NEXA · FP-17 · AUTHORIZATION TEST HARNESS' index.html
-          grep -q 'neonauth.c-4.ap-southeast-1.aws.neon.tech' index.html
-          grep -q 'apirest.c-4.ap-southeast-1.aws.neon.tech' index.html
           grep -q 'createClient' index.html
           ! grep -Eqi '(service[_-]?role|postgres(ql)?://|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|access_token[[:space:]]*[:=])' index.html
+      - name: Build isolated FP-17 preview payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p fp17-preview
+          cp index.html fp17-preview/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("fp17-preview/index.html")
+          s=p.read_text()
+          replacements={
+            "https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth":
+              "https://ep-bitter-cloud-b3hsprrg.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth",
+            "https://ep-blue-leaf-b34hv87k.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1":
+              "https://ep-bitter-cloud-b3hsprrg.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1",
+            "https://ep-blue-leaf-b34hv87k.c-4.ap-southeast-1.aws.neon.tech/neondb":
+              "https://ep-bitter-cloud-b3hsprrg.c-4.ap-southeast-1.aws.neon.tech/neondb",
+          }
+          for old,new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f"Expected source endpoint missing: {old}")
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+          printf '%s\n' 'NEXA FP-17 isolated authenticated preview. Non-production isolated Neon branch only. No embedded credentials.' > fp17-preview/NOTICE.txt
+      - name: Validate isolated payload security and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'ep-bitter-cloud-b3hsprrg.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth' fp17-preview/index.html
+          grep -q 'ep-bitter-cloud-b3hsprrg.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1' fp17-preview/index.html
+          grep -q 'ep-bitter-cloud-b3hsprrg.c-4.ap-southeast-1.aws.neon.tech/neondb' fp17-preview/index.html
+          ! grep -q 'ep-blue-leaf-b34hv87k' fp17-preview/index.html
+          ! grep -Eqi '(service[_-]?role|postgres(ql)?://|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|access_token[[:space:]]*[:=])' fp17-preview/index.html
           python3 - <<'PY'
           import re, pathlib, sys
-          s=pathlib.Path("index.html").read_text()
+          s=pathlib.Path("fp17-preview/index.html").read_text()
           urls=set(re.findall(r'https://[^"[:space:]<>]+',s))
           allowed=(
             "https://esm.sh/",
-            "https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/",
-            "https://ep-blue-leaf-b34hv87k.apirest.c-4.ap-southeast-1.aws.neon.tech/",
-            "https://ep-blue-leaf-b34hv87k.c-4.ap-southeast-1.aws.neon.tech/"
+            "https://ep-bitter-cloud-b3hsprrg.neonauth.c-4.ap-southeast-1.aws.neon.tech/",
+            "https://ep-bitter-cloud-b3hsprrg.apirest.c-4.ap-southeast-1.aws.neon.tech/",
+            "https://ep-bitter-cloud-b3hsprrg.c-4.ap-southeast-1.aws.neon.tech/"
           )
           bad=[u for u in urls if not u.startswith(allowed)]
           if bad:
-            print("Unapproved browser endpoint(s):", *bad, sep="\n")
-            sys.exit(1)
-          print("FP-17 endpoint allow-list PASS")
+              print("Unapproved browser endpoint(s):", *bad, sep="\n")
+              sys.exit(1)
+          print("FP-17 isolated endpoint allow-list PASS")
           PY
-      - name: Build isolated authenticated preview artifact
-        run: |
-          mkdir -p _auth_preview
-          cp index.html _auth_preview/index.html
-          printf '%s\n' 'NEXA FP-17 authenticated development preview. Non-production Neon Auth/Data only. No embedded credentials.' > _auth_preview/NOTICE.txt
       - uses: actions/upload-artifact@v4
         with:
           name: nexa-fp17-auth-preview
-          path: _auth_preview
+          path: fp17-preview
           retention-days: 7
