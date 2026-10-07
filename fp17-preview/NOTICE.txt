@@ -1,0 +1,4 @@
+NEXA FP-17 isolated authenticated preview.
+Non-production isolated Neon branch only.
+Payload must be generated from the validated FP-17 source boundary and must not contain embedded credentials.
+Production and main are untouched.
