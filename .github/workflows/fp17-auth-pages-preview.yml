@@ -1,0 +1,61 @@
+name: NEXA FP-17 Authenticated Pages Preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: nexa-fp17-auth-pages
+  cancel-in-progress: false
+jobs:
+  deploy-auth-preview:
+    if: github.repository == 'kasemch/awos-static-preview' && github.ref == 'refs/heads/feature/awos-fp-01'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated authenticated payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f index.html
+          test -f baseline/index.html
+          test ! -e .env
+          test ! -e CNAME
+          grep -q 'NEXA · FP-17 · AUTHORIZATION TEST HARNESS' index.html
+          grep -q 'createClient' index.html
+          ! grep -Eqi '(service[_-]?role|postgres(ql)?://|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|access_token[[:space:]]*[:=])' index.html
+          rm -rf _site
+          mkdir -p _site/auth-preview
+          cp baseline/index.html _site/index.html
+          cp index.html _site/auth-preview/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('_site/auth-preview/index.html')
+          s=p.read_text()
+          replacements={
+            'https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth':'https://ep-bitter-cloud-b3hsprrg.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth',
+            'https://ep-blue-leaf-b34hv87k.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1':'https://ep-bitter-cloud-b3hsprrg.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1',
+            'https://ep-blue-leaf-b34hv87k.c-4.ap-southeast-1.aws.neon.tech/neondb':'https://ep-bitter-cloud-b3hsprrg.c-4.ap-southeast-1.aws.neon.tech/neondb',
+          }
+          for old,new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'Expected source endpoint missing: {old}')
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+          grep -q 'ep-bitter-cloud-b3hsprrg.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth' _site/auth-preview/index.html
+          grep -q 'ep-bitter-cloud-b3hsprrg.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1' _site/auth-preview/index.html
+          ! grep -q 'ep-blue-leaf-b34hv87k' _site/auth-preview/index.html
+          ! grep -Eqi '(service[_-]?role|postgres(ql)?://|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|access_token[[:space:]]*[:=])' _site/auth-preview/index.html
+          printf '%s\n' 'NEXA FP-17 authenticated non-production preview. Isolated Neon branch. No embedded credentials.' > _site/auth-preview/NOTICE.txt
+          printf '%s\n' 'NEXA synthetic public baseline. Authenticated pilot is isolated under /auth-preview/.' > _site/NOTICE.txt
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
