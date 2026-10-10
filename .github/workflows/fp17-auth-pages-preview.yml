@@ -43,15 +43,17 @@ jobs:
             'https://ep-blue-leaf-b34hv87k.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth':'https://ep-bitter-cloud-b3hsprrg.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth',
             'https://ep-blue-leaf-b34hv87k.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1':'https://ep-bitter-cloud-b3hsprrg.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1',
             'https://ep-blue-leaf-b34hv87k.c-4.ap-southeast-1.aws.neon.tech/neondb':'https://ep-bitter-cloud-b3hsprrg.c-4.ap-southeast-1.aws.neon.tech/neondb',
+            'mod.createClient(NEXA_DB_BASE)':'mod.createClient({auth:{url:NEXA_AUTH_URL},dataApi:{url:NEXA_DATA_API_URL}})',
           }
           for old,new in replacements.items():
               if old not in s:
-                  raise SystemExit(f'Expected source endpoint missing: {old}')
+                  raise SystemExit(f'Expected source binding missing: {old}')
               s=s.replace(old,new)
           p.write_text(s)
           PY
           grep -q 'ep-bitter-cloud-b3hsprrg.neonauth.c-4.ap-southeast-1.aws.neon.tech/neondb/auth' _site/auth-preview/index.html
           grep -q 'ep-bitter-cloud-b3hsprrg.apirest.c-4.ap-southeast-1.aws.neon.tech/neondb/rest/v1' _site/auth-preview/index.html
+          grep -Fq 'mod.createClient({auth:{url:NEXA_AUTH_URL},dataApi:{url:NEXA_DATA_API_URL}})' _site/auth-preview/index.html
           ! grep -q 'ep-blue-leaf-b34hv87k' _site/auth-preview/index.html
           ! grep -Eqi '(service[_-]?role|postgres(ql)?://|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|client_secret|access_token[[:space:]]*[:=])' _site/auth-preview/index.html
           printf '%s\n' 'NEXA FP-17 authenticated non-production preview. Isolated Neon branch. No embedded credentials.' > _site/auth-preview/NOTICE.txt
