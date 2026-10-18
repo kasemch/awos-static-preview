@@ -14,29 +14,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate synthetic static preview
+      - name: Validate public gateway and private prototype boundary
         run: |
           node - <<'NODE'
           const fs=require('node:fs'),assert=require('node:assert/strict');
-          const h=fs.readFileSync('index.html','utf8');
-          for(const s of ['lang="th"','name="viewport"','aria-label="AWOS modules"','id="capture"','role="status"','Cloud Sync: NOT CONNECTED','prefers-reduced-motion','focus-visible','max-width:760px']) assert.ok(h.includes(s),'Missing '+s);
-          const modules=['Dashboard','My Tasks','Projects','Calendar','Documents & Evidence','AI Assistant','Reports & Analytics','Approval','Settings & Profile','All-in-One Workspace'];
-          for(const name of modules) assert.ok(h.includes('["'+name+'",'),'Missing module '+name);
-          assert.doesNotMatch(h,/https?:\/\/|fetch\s*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co/i);
+          const pub=fs.readFileSync('index.html','utf8');
+          const cmd=fs.readFileSync('command-center/index.html','utf8');
+          for(const s of ['name="viewport"','Kasem Chooratna','Academic Gateway','prefers-reduced-motion']) assert.ok(pub.includes(s),'Public gateway missing '+s);
+          for(const s of ['name="viewport"','noindex,nofollow','KASEM Academic Command Center','NON-PRODUCTION PROTOTYPE','No private cloud data connected','Privacy Gate']) assert.ok(cmd.includes(s),'Command Center missing '+s);
+          assert.doesNotMatch(cmd,/fetch\s*\(|XMLHttpRequest|localStorage|sessionStorage|service_role|supabase\.co/i);
           assert.ok(!fs.existsSync('CNAME'),'Custom domain must not be configured');
-          console.log('PASS: static structure, ten modules, and no external endpoints. Browser/device testing remains manual.');
+          console.log('PASS: public gateway and command-center privacy boundary.');
           NODE
-      - name: Install browser test dependency
-        run: |
-          npm install --no-save playwright@1.58.2
-          npx playwright install --with-deps chromium
-      - name: Chromium responsive and interaction acceptance
-        run: node tests/browser-smoke.cjs
+      - name: Run workflow and teaching engine tests
+        run: npm test
       - name: Upload isolated artifact (not Pages)
         uses: actions/upload-artifact@v4
         with:
-          name: awos-static-preview
+          name: academic-command-center-preview
           path: |
             index.html
-            README.md
+            command-center/index.html
+            docs/command-center-architecture.md
+            data/teaching-baseline.example.json
           if-no-files-found: error
