@@ -1,0 +1,6 @@
+{
+  "name": "kasem-academic-command-center",
+  "private": true,
+  "type": "module",
+  "scripts": {"test":"node tests/engine.spec.mjs"}
+}
