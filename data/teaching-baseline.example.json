@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0",
+  "classification": "SANITIZED_PUBLIC_REPO_EXAMPLE",
+  "semester": {
+    "label": "2/2569",
+    "teachingStart": "2026-11-16",
+    "teachingEnd": "2027-03-05",
+    "examStart": "2027-03-09",
+    "examEnd": "2027-03-22",
+    "semesterEnd": "2027-03-23"
+  },
+  "courses": [
+    {"code":"HED1101","evidence":"VERIFIED"},
+    {"code":"HED3505","evidence":"VERIFIED","day":"Monday","start":"11:30","end":"13:20"},
+    {"code":"HED4001","evidence":"VERIFIED","day":"Friday","start":"13:30","end":"18:30"},
+    {"code":"RHE2100","evidence":"VERIFIED"},
+    {"code":"RHE3101","evidence":"VERIFIED","sharedPhysicalBlock":"RHE3101-RHE3401"},
+    {"code":"RHE3401","evidence":"VERIFIED","sharedPhysicalBlock":"RHE3101-RHE3401"},
+    {"code":"RHE3405","evidence":"VERIFIED"},
+    {"code":"RHE3409","evidence":"VERIFIED"},
+    {"code":"RHE4202","evidence":"VERIFIED"},
+    {"code":"RED1002","evidence":"VERIFIED"},
+    {"code":"RED3202","evidence":"VERIFIED"},
+    {"code":"RAM1142","evidence":"VERIFIED"}
+  ],
+  "academicExceptions": [
+    {"date":"2027-01-20","type":"NO_LECTURE","evidence":"VERIFIED"}
+  ],
+  "rules": {
+    "unknownFieldsRemainUnknown": true,
+    "noPrivateCalendarData": true,
+    "noStudentData": true
+  }
+}
